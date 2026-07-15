@@ -1,28 +1,60 @@
-<h2 class="sr-only">Top-down hra: řízení auta Opel šipkami nebo dotykovým ovladačem po síti městských ulic</h2>
+<h2 class="sr-only">Top-down hra: řízení auta Opel šipkami nebo dotykovým joypadem po síti městských ulic, s možností fullscreen</h2>
 <div style="display:flex; align-items:center; gap:16px; margin-bottom:8px; font-size:14px; color:var(--text-secondary);">
   <div>Rychlost: <span id="speedOut" style="font-weight:500; color:var(--text-primary);">0</span></div>
-  <div style="margin-left:auto;">Šipky / WASD / dotyk</div>
+  <div style="margin-left:auto;">Šipky / WASD / joypad</div>
 </div>
-<div style="position:relative; width:100%; border-radius:12px; overflow:hidden; border:0.5px solid var(--border);">
-  <canvas id="game" width="640" height="440" style="display:block; width:100%; background:#3a3d3f; touch-action:none;"></canvas>
-  <div style="position:absolute; left:12px; bottom:12px; width:120px; height:120px; display:grid; grid-template-columns:36px 36px 36px; grid-template-rows:36px 36px 36px; gap:4px; user-select:none;">
-    <div></div>
-    <button id="btnUp" style="grid-column:2; grid-row:1; border-radius:8px; border:0.5px solid rgba(255,255,255,0.3); background:rgba(20,20,20,0.55); color:#fff; font-size:16px; touch-action:none;"><i class="ti ti-chevron-up" aria-hidden="true"></i></button>
-    <div></div>
-    <button id="btnLeft" style="grid-column:1; grid-row:2; border-radius:8px; border:0.5px solid rgba(255,255,255,0.3); background:rgba(20,20,20,0.55); color:#fff; font-size:16px; touch-action:none;"><i class="ti ti-chevron-left" aria-hidden="true"></i></button>
-    <div></div>
-    <button id="btnRight" style="grid-column:3; grid-row:2; border-radius:8px; border:0.5px solid rgba(255,255,255,0.3); background:rgba(20,20,20,0.55); color:#fff; font-size:16px; touch-action:none;"><i class="ti ti-chevron-right" aria-hidden="true"></i></button>
-    <div></div>
-    <button id="btnDown" style="grid-column:2; grid-row:3; border-radius:8px; border:0.5px solid rgba(255,255,255,0.3); background:rgba(20,20,20,0.55); color:#fff; font-size:16px; touch-action:none;"><i class="ti ti-chevron-down" aria-hidden="true"></i></button>
-    <div></div>
+<div id="wrapper" style="position:relative; width:100%; height:0; padding-bottom:68.75%; border-radius:12px; overflow:hidden; border:0.5px solid var(--border); background:#3a3d3f;">
+  <canvas id="game" style="position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none;"></canvas>
+  <button id="btnFull" aria-label="Fullscreen" style="position:absolute; top:10px; right:10px; width:44px; height:44px; border-radius:8px; border:0.5px solid rgba(255,255,255,0.35); background:rgba(20,20,20,0.6); color:#fff; font-size:20px; display:flex; align-items:center; justify-content:center;"><i class="ti ti-maximize" id="fullIcon" aria-hidden="true"></i></button>
+  <div style="position:absolute; left:14px; bottom:14px; width:170px; height:170px; user-select:none;">
+    <button id="btnUp" style="position:absolute; left:55px; top:0; width:60px; height:60px; border-radius:12px; border:0.5px solid rgba(255,255,255,0.35); background:rgba(30,30,32,0.65); color:#fff; font-size:26px; touch-action:none;"><i class="ti ti-chevron-up" aria-hidden="true"></i></button>
+    <button id="btnLeft" style="position:absolute; left:0; top:55px; width:60px; height:60px; border-radius:12px; border:0.5px solid rgba(255,255,255,0.35); background:rgba(30,30,32,0.65); color:#fff; font-size:26px; touch-action:none;"><i class="ti ti-chevron-left" aria-hidden="true"></i></button>
+    <button id="btnDown" style="position:absolute; left:55px; top:110px; width:60px; height:60px; border-radius:12px; border:0.5px solid rgba(255,255,255,0.35); background:rgba(30,30,32,0.65); color:#fff; font-size:26px; touch-action:none;"><i class="ti ti-chevron-down" aria-hidden="true"></i></button>
+    <button id="btnRight" style="position:absolute; left:110px; top:55px; width:60px; height:60px; border-radius:12px; border:0.5px solid rgba(255,255,255,0.35); background:rgba(30,30,32,0.65); color:#fff; font-size:26px; touch-action:none;"><i class="ti ti-chevron-right" aria-hidden="true"></i></button>
   </div>
 </div>
 <script>
 (function(){
+const wrapper = document.getElementById('wrapper');
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-const W = 640, H = 440;
+let W = 640, H = 440;
 const world = {size: 2400, block: 300, road: 80};
+
+function resizeCanvas(){
+  const rect = wrapper.getBoundingClientRect();
+  W = Math.max(200, Math.round(rect.width));
+  H = Math.max(150, Math.round(rect.height));
+  canvas.width = W;
+  canvas.height = H;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+const btnFull = document.getElementById('btnFull');
+const fullIcon = document.getElementById('fullIcon');
+btnFull.addEventListener('click', () => {
+  if(!document.fullscreenElement){
+    (wrapper.requestFullscreen || wrapper.webkitRequestFullscreen || function(){}).call(wrapper);
+  } else {
+    (document.exitFullscreen || document.webkitExitFullscreen || function(){}).call(document);
+  }
+});
+document.addEventListener('fullscreenchange', () => {
+  const isFull = !!document.fullscreenElement;
+  if(isFull){
+    wrapper.style.paddingBottom = '0';
+    wrapper.style.height = '100vh';
+    wrapper.style.borderRadius = '0';
+    fullIcon.className = 'ti ti-minimize';
+  } else {
+    wrapper.style.height = '0';
+    wrapper.style.paddingBottom = '68.75%';
+    wrapper.style.borderRadius = '12px';
+    fullIcon.className = 'ti ti-maximize';
+  }
+  setTimeout(resizeCanvas, 50);
+});
 
 function isOnRoad(x,y){
   const b = world.block, r = world.road;
