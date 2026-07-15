@@ -1,0 +1,180 @@
+<h2 class="sr-only">Top-down hra: řízení většího auta Opel s detailnějším obličejem řidiče, šipkami po síti městských ulic</h2>
+<div style="display:flex; align-items:center; gap:16px; margin-bottom:8px; font-size:14px; color:var(--text-secondary);">
+  <div>Rychlost: <span id="speedOut" style="font-weight:500; color:var(--text-primary);">0</span></div>
+  <div style="margin-left:auto;">Ovládání: šipky / WASD</div>
+</div>
+<div style="position:relative; width:100%; border-radius:12px; overflow:hidden; border:0.5px solid var(--border);">
+  <canvas id="game" width="640" height="440" style="display:block; width:100%; background:#3a3d3f;"></canvas>
+</div>
+<script>
+(function(){
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const W = 640, H = 440;
+const world = {size: 2400, block: 300, road: 80};
+
+function isOnRoad(x,y){
+  const b = world.block, r = world.road;
+  const mx = ((x % b) + b) % b;
+  const my = ((y % b) + b) % b;
+  return mx < r || my < r;
+}
+
+const car = {x: 1200, y: 1200, angle: -Math.PI/2, speed: 0, w: 40, h: 66};
+const keys = {};
+window.addEventListener('keydown', e => { keys[e.key]=true; if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault(); });
+window.addEventListener('keyup', e => { keys[e.key]=false; });
+
+function update(){
+  const accel = 0.28, maxSpeed = 5.2, friction = 0.05, turnSpeed = 0.04;
+  const up = keys['ArrowUp']||keys['w']||keys['W'];
+  const down = keys['ArrowDown']||keys['s']||keys['S'];
+  const left = keys['ArrowLeft']||keys['a']||keys['A'];
+  const right = keys['ArrowRight']||keys['d']||keys['D'];
+
+  if(up) car.speed += accel;
+  if(down) car.speed -= accel;
+  car.speed *= (1-friction);
+  car.speed = Math.max(-maxSpeed*0.6, Math.min(maxSpeed, car.speed));
+
+  if(Math.abs(car.speed) > 0.05){
+    const dir = car.speed > 0 ? 1 : -1;
+    if(left) car.angle -= turnSpeed * dir;
+    if(right) car.angle += turnSpeed * dir;
+  }
+
+  const nx = car.x + Math.cos(car.angle) * car.speed;
+  const ny = car.y + Math.sin(car.angle) * car.speed;
+  if(isOnRoad(nx, car.y)) car.x = nx;
+  if(isOnRoad(car.x, ny)) car.y = ny;
+
+  document.getElementById('speedOut').textContent = Math.round(Math.abs(car.speed)*20);
+}
+
+function drawCity(camX, camY){
+  const b = world.block, r = world.road;
+  const startX = Math.floor((camX-W)/b)*b, endX = camX+W;
+  const startY = Math.floor((camY-H)/b)*b, endY = camY+H;
+  for(let bx=startX; bx<endX; bx+=b){
+    for(let by=startY; by<endY; by+=b){
+      const sx = bx - camX + W/2, sy = by - camY + H/2;
+      ctx.fillStyle = '#2f3234';
+      ctx.fillRect(sx, sy, r, world.size);
+      ctx.fillRect(sx, sy, world.size, r);
+      const bColors = ['#7a5a4a','#5a6a4a','#4a5a6a','#6a5a5a'];
+      ctx.fillStyle = bColors[(Math.floor(bx/b)+Math.floor(by/b))%bColors.length];
+      ctx.fillRect(sx+r+8, sy+r+8, b-r-16, b-r-16);
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      for(let wx=0; wx<3; wx++) for(let wy=0; wy<3; wy++){
+        ctx.fillRect(sx+r+20+wx*(b-r-40)/3, sy+r+20+wy*(b-r-40)/3, 14, 14);
+      }
+      ctx.strokeStyle = 'rgba(255,220,120,0.4)';
+      ctx.setLineDash([10,10]);
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(sx+r/2, sy); ctx.lineTo(sx+r/2, sy+world.size); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(sx, sy+r/2); ctx.lineTo(sx+world.size, sy+r/2); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+}
+
+function drawFace(r){
+  ctx.save();
+  ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.clip();
+  ctx.fillStyle = '#e8bd93';
+  ctx.fillRect(-r,-r,r*2,r*2);
+  ctx.fillStyle = '#d9a878';
+  ctx.beginPath();
+  ctx.ellipse(r*0.35, r*0.1, r*0.55, r*0.75, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#3a2a20';
+  ctx.beginPath();
+  ctx.ellipse(-r*0.35, -r*0.4, r*0.22, r*0.09, -0.2, 0, Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(r*0.28, -r*0.42, r*0.24, r*0.09, 0.15, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.ellipse(-r*0.32,-r*0.18,r*0.13,r*0.09,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(r*0.3,-r*0.2,r*0.13,r*0.09,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#4a7ea6';
+  ctx.beginPath(); ctx.arc(-r*0.30,-r*0.17,r*0.06,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(r*0.32,-r*0.19,r*0.06,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#1c130d';
+  ctx.beginPath(); ctx.arc(-r*0.30,-r*0.17,r*0.028,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(r*0.32,-r*0.19,r*0.028,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle = 'rgba(120,80,55,0.5)';
+  ctx.lineWidth = r*0.02;
+  ctx.beginPath(); ctx.moveTo(-r*0.45,-r*0.05); ctx.quadraticCurveTo(-r*0.55,r*0.1,-r*0.42,r*0.28); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(r*0.5,-r*0.02); ctx.quadraticCurveTo(r*0.62,r*0.15,r*0.5,r*0.32); ctx.stroke();
+  ctx.strokeStyle = '#c99a72';
+  ctx.lineWidth = r*0.035;
+  ctx.beginPath();
+  ctx.moveTo(-r*0.05,-r*0.15);
+  ctx.quadraticCurveTo(-r*0.1,r*0.12,-r*0.02,r*0.2);
+  ctx.lineTo(r*0.1,r*0.2);
+  ctx.stroke();
+  ctx.fillStyle = '#c0654f';
+  ctx.beginPath();
+  ctx.ellipse(0,r*0.42,r*0.28,r*0.09,0,0,Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(-r*0.16,r*0.37,r*0.32,r*0.035);
+  ctx.fillStyle = '#3a2a20';
+  ctx.fillRect(-r*4,-r*4,r*8,r*0.55);
+  ctx.restore();
+  ctx.strokeStyle = '#2a1c14';
+  ctx.lineWidth = r*0.04;
+  ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.stroke();
+}
+
+function drawCar(){
+  ctx.save();
+  ctx.translate(W/2, H/2);
+  ctx.rotate(car.angle + Math.PI/2);
+  ctx.fillStyle = '#b8bec2';
+  ctx.beginPath();
+  ctx.moveTo(-car.w/2+6, car.h/2);
+  ctx.lineTo(car.w/2-6, car.h/2);
+  ctx.lineTo(car.w/2, -car.h/2+12);
+  ctx.lineTo(car.w/2-9, -car.h/2);
+  ctx.lineTo(-car.w/2+9, -car.h/2);
+  ctx.lineTo(-car.w/2, -car.h/2+12);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#8b9296'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = '#1c2a3a';
+  ctx.beginPath();
+  ctx.roundRect(-car.w/2+7, -14, car.w-14, 34, 6);
+  ctx.fill();
+  ctx.save();
+  ctx.beginPath(); ctx.roundRect(-car.w/2+7, -14, car.w-14, 34, 6); ctx.clip();
+  drawFace(car.w*0.34);
+  ctx.restore();
+  ctx.fillStyle = '#111';
+  ctx.fillRect(-8,-car.h/2-3,5,8);
+  ctx.fillRect(3,-car.h/2-3,5,8);
+  ctx.fillStyle = '#7a1f1f';
+  ctx.fillRect(-8,car.h/2-4,5,6);
+  ctx.fillRect(3,car.h/2-4,5,6);
+  ctx.save();
+  ctx.font = 'bold 9px sans-serif';
+  ctx.fillStyle = '#22282c';
+  ctx.textAlign = 'center';
+  ctx.translate(0, car.h/2-13);
+  ctx.rotate(Math.PI);
+  ctx.fillText('OPEL', 0, 0);
+  ctx.restore();
+  ctx.restore();
+}
+
+function loop(){
+  update();
+  ctx.clearRect(0,0,W,H);
+  drawCity(car.x, car.y);
+  drawCar();
+  requestAnimationFrame(loop);
+}
+loop();
+})();
+</script>
