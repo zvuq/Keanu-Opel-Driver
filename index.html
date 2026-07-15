@@ -1,10 +1,21 @@
-<h2 class="sr-only">Top-down hra: řízení většího auta Opel s detailnějším obličejem řidiče, šipkami po síti městských ulic</h2>
+<h2 class="sr-only">Top-down hra: řízení auta Opel šipkami nebo dotykovým ovladačem po síti městských ulic</h2>
 <div style="display:flex; align-items:center; gap:16px; margin-bottom:8px; font-size:14px; color:var(--text-secondary);">
   <div>Rychlost: <span id="speedOut" style="font-weight:500; color:var(--text-primary);">0</span></div>
-  <div style="margin-left:auto;">Ovládání: šipky / WASD</div>
+  <div style="margin-left:auto;">Šipky / WASD / dotyk</div>
 </div>
 <div style="position:relative; width:100%; border-radius:12px; overflow:hidden; border:0.5px solid var(--border);">
-  <canvas id="game" width="640" height="440" style="display:block; width:100%; background:#3a3d3f;"></canvas>
+  <canvas id="game" width="640" height="440" style="display:block; width:100%; background:#3a3d3f; touch-action:none;"></canvas>
+  <div style="position:absolute; left:12px; bottom:12px; width:120px; height:120px; display:grid; grid-template-columns:36px 36px 36px; grid-template-rows:36px 36px 36px; gap:4px; user-select:none;">
+    <div></div>
+    <button id="btnUp" style="grid-column:2; grid-row:1; border-radius:8px; border:0.5px solid rgba(255,255,255,0.3); background:rgba(20,20,20,0.55); color:#fff; font-size:16px; touch-action:none;"><i class="ti ti-chevron-up" aria-hidden="true"></i></button>
+    <div></div>
+    <button id="btnLeft" style="grid-column:1; grid-row:2; border-radius:8px; border:0.5px solid rgba(255,255,255,0.3); background:rgba(20,20,20,0.55); color:#fff; font-size:16px; touch-action:none;"><i class="ti ti-chevron-left" aria-hidden="true"></i></button>
+    <div></div>
+    <button id="btnRight" style="grid-column:3; grid-row:2; border-radius:8px; border:0.5px solid rgba(255,255,255,0.3); background:rgba(20,20,20,0.55); color:#fff; font-size:16px; touch-action:none;"><i class="ti ti-chevron-right" aria-hidden="true"></i></button>
+    <div></div>
+    <button id="btnDown" style="grid-column:2; grid-row:3; border-radius:8px; border:0.5px solid rgba(255,255,255,0.3); background:rgba(20,20,20,0.55); color:#fff; font-size:16px; touch-action:none;"><i class="ti ti-chevron-down" aria-hidden="true"></i></button>
+    <div></div>
+  </div>
 </div>
 <script>
 (function(){
@@ -24,6 +35,22 @@ const car = {x: 1200, y: 1200, angle: -Math.PI/2, speed: 0, w: 40, h: 66};
 const keys = {};
 window.addEventListener('keydown', e => { keys[e.key]=true; if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault(); });
 window.addEventListener('keyup', e => { keys[e.key]=false; });
+
+function bindTouch(id, key){
+  const el = document.getElementById(id);
+  const on = e => { e.preventDefault(); keys[key]=true; };
+  const off = e => { e.preventDefault(); keys[key]=false; };
+  el.addEventListener('touchstart', on, {passive:false});
+  el.addEventListener('touchend', off, {passive:false});
+  el.addEventListener('touchcancel', off, {passive:false});
+  el.addEventListener('mousedown', on);
+  el.addEventListener('mouseup', off);
+  el.addEventListener('mouseleave', off);
+}
+bindTouch('btnUp','ArrowUp');
+bindTouch('btnDown','ArrowDown');
+bindTouch('btnLeft','ArrowLeft');
+bindTouch('btnRight','ArrowRight');
 
 function update(){
   const accel = 0.28, maxSpeed = 5.2, friction = 0.05, turnSpeed = 0.04;
